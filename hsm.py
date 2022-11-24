@@ -37,7 +37,7 @@ class HSM:
     
     """
 
-    def __init__(self, run_number, sim_duration, warm_up_duration, sim_start_date, what_if_sim_run, transition_type, ia_type):
+    def __init__(self, run_number: int, sim_duration: int, warm_up_duration: int, sim_start_date: str, what_if_sim_run: str, transition_type: str, ia_type: str) :
         print(f"Sim duration inside HSM model is {sim_duration}, transition is {transition_type} and inter_arrival: {ia_type}")
         self.env = simpy.Environment()
         self.patient_counter = 0
@@ -102,11 +102,8 @@ class HSM:
         self.network_graph_location = G.network_graph_location if what_if_sim_run == 'No' else G.wi_network_graph_location
 
 
-    def create_network_df(self, run_number) -> pd.DataFrame:
+    def create_network_df(self, run_number: int) -> pd.DataFrame:
         """Create an empty pandas dataframe ready to populate with network analysis data
-
-        **Args:**  
-            `run_number`          : int
 
         **Returns:**  
             Pandas dataframe consisting of all possible combination of healthcare system 'nodes'. There are 6 in total. 
@@ -246,8 +243,7 @@ class HSM:
             
     def patient_journey(self, patient: Caller) -> None:
         """
-        Determine whether the patient's index 111 call is in-hours or out-of-hours (ooh)
-        
+            Determine whether the patient's index 111 call is in-hours or out-of-hours (ooh)
         """
 
         # Variable to keep track of the order of healthcare interactions.
@@ -298,28 +294,7 @@ class HSM:
 
             if patient.activity == 'Index_IUC':
                 # As a one-off, capture the completed Index IUC call
-                results = {
-                    "P_ID"        : patient.id,
-                    "run_number"  : self.run_number,
-                    "activity"    : patient.activity,
-                    "timestamp"   : self.env.now,         
-                    "status"      : 'completed',
-                    "instance_id" : 0,
-                    "hour"        : patient.hour,
-                    "day"         : patient.day,
-                    "weekday"     : patient.weekday,
-                    "qtr"         : patient.qtr,
-                    "GP"          : patient.gp,
-                    "age"         : patient.age,
-                    "sex"         : patient.sex,
-                    "pc_outcome"  : patient.pc_outcome,
-                    "gp_contact"  : patient.gp_timely_callback,
-                    "avoidable"   : ED_urgent
-                }
-            
-                # If we are out of the warm up period, we can start recording results
-                if self.env.now > self.warm_up_duration:
-                    self.store_patient_results(results)
+                self.add_patient_result_row(self, 'completed', patient, instance_id, ED_urgent)
             
             # Update current patient activity
             patient.activity = next_step
@@ -328,103 +303,54 @@ class HSM:
             # The time between this and 'start' will be the queue time
             # or wait time or time for the patient to have another
             # interaction with a healthcare service.
-            results = {
-                "P_ID"        : patient.id,
-                "run_number"  : self.run_number,
-                "activity"    : patient.activity,
-                "timestamp"   : self.env.now,         
-                "status"      : 'scheduled',
-                "instance_id" : instance_id,
-                "hour"        : patient.hour,
-                "day"         : patient.day,
-                "weekday"     : patient.weekday,
-                "qtr"         : patient.qtr,
-                "GP"          : patient.gp,
-                "age"         : patient.age,
-                "sex"         : patient.sex,
-                "pc_outcome"  : patient.pc_outcome,
-                "gp_contact"  : patient.gp_timely_callback,
-                "avoidable"   : ED_urgent
-            }
-            
-            # If we are out of the warm up period, we can start recording results
-            if self.env.now > self.warm_up_duration:
-                self.store_patient_results(results)
+            self.add_patient_result_row(self, 'scheduled', patient, instance_id, ED_urgent)
                 
-            
+            # Consult the wait_time function to find out how long until the next activity
             wait_time = self.t.wait_time(current_step, patient.activity)
             yield self.env.timeout(wait_time)
 
-            
-            if(patient.activity == 'GP'):
-                #print(f'Patient {patient.id} is off to GP')
-                with self.GP.request() as req:
-                    yield self.env.process(self.step_visit(patient, req, instance_id, 'GP', ED_urgent))
-            elif(patient.activity == 'ED'):
-                # Need to determine whether the admnission is avoidable (non-urgent) or not (urgent)
-                ED_urgent = "non_urgent" if self.t.avoidable_ed_admission(patient.pc_outcome, patient.gp_timely_callback) else "urgent"
-                #print(f'Patient {patient.id} is off to ED')
-                with self.ED.request() as req:
-                    yield self.env.process(self.step_visit(patient, req, instance_id, 'ED', ED_urgent))
-            elif(patient.activity == 'IP'):
-                #print(f'Patient {patient.id} is off to IP')
-                with self.IP.request() as req:
-                    yield self.env.process(self.step_visit(patient, req, instance_id, 'IP', ED_urgent))
-            elif(patient.activity == 'IUC'):
-                #print(f'Patient {patient.id} is off to 111')
-                with self.Treble1.request() as req:
-                    yield self.env.process(self.step_visit(patient, req, instance_id, 'IUC', ED_urgent))
-            elif(patient.activity == '999'):
-                #print(f'Patient {patient.id} is off to 999')
-                with self.Treble9.request() as req:
-                    yield self.env.process(self.step_visit(patient, req, instance_id, '999', ED_urgent))
-            elif(patient.activity == 'End'):
+            # Based on current patient activity, need to determine where they go next...
+            if(patient.activity == 'End'):
                 break
+            elif patient.activity == 'ED':
+                ED_urgent = "non_urgent" if self.t.avoidable_ed_admission(patient.pc_outcome, patient.gp_timely_callback) else "urgent"
+                self.add_patient_result_row('start', patient, instance_id, ED_urgent)
+                yield self.env.process(self.step_visit(patient, instance_id, ED_urgent))
+            else:
+                self.add_patient_result_row('start', patient, instance_id, ED_urgent)
+                yield self.env.process(self.step_visit(patient, instance_id, ED_urgent))
             
+            # Keep track of how long patient has been in sim
             patient.timer = self.env.now - patient_enters_sim
-        
 
-    def step_visit(self, patient, yieldvalue, instance_id, visit_type, ED_urgent):
 
-        # TODO: Refactor to avoid repition of code
-        # Possibly create single function with flag to identify whether
-        # started or completed event.
-        
-        # Wait time to access service
-        yield yieldvalue
-        
-        results = {
-            "P_ID"        : patient.id,
-            "run_number"  : self.run_number,
-            "activity"    : visit_type,
-            "timestamp"   : self.env.now,         
-            "status"      : 'start',
-            "instance_id" : instance_id,
-            "hour"        : patient.hour,
-            "day"         : patient.day,
-            "weekday"     : patient.weekday,
-            "qtr"         : patient.qtr,
-            "GP"          : patient.gp,
-            "age"         : patient.age,
-            "sex"         : patient.sex,
-            "pc_outcome"  : patient.pc_outcome,
-            "gp_contact"  : patient.gp_timely_callback,
-            "avoidable"   : ED_urgent
-        }
-
-        if self.env.now > self.warm_up_duration:
-            self.store_patient_results(results)
+    def step_visit(self, patient: Caller, instance_id: int, ED_urgent: str) -> None:
+        """
+            Functino to retrieve activity time for duration, wait for visit to complete  
+            then write result to `result_df`
+        """
         
         # Duration of visit
-        visit_duration = self.t.activity_time(visit_type, ED_urgent)
+        visit_duration = self.t.activity_time(patient.activity, ED_urgent)
+
+        # Wait until visit is over
         yield self.env.timeout(visit_duration)
+
+        # Update results_df with current values
+        self.add_patient_result_row('completed', patient, instance_id, ED_urgent)
+
+
+    def add_patient_result_row(self, status: str, patient: Caller, instance_id: int, ED_urgent: str) -> None :
+        """
+            Convenience function to create a row of data for the results table
         
+        """
         results = {
             "P_ID"        : patient.id,
             "run_number"  : self.run_number,
-            "activity"    : visit_type,
+            "activity"    : patient.activity,
             "timestamp"   : self.env.now,         
-            "status"      : 'completed',
+            "status"      : status,
             "instance_id" : instance_id,
             "hour"        : patient.hour,
             "day"         : patient.day,
@@ -437,19 +363,19 @@ class HSM:
             "gp_contact"  : patient.gp_timely_callback,
             "avoidable"   : ED_urgent
         }
-        
+
         if self.env.now > self.warm_up_duration:
             self.store_patient_results(results)
+
             
-    def store_patient_results(self, results: pd.DataFrame) -> None:      
+    def store_patient_results(self, results: dict) -> None:      
+        """
+            Adds a row of data to the Class' `result_df` dataframe
         """
 
-        Adds a row of data to the Class' `result_df` dataframe
+        df_dictionary = pd.DataFrame([results])
         
-        """
-        
-        results.set_index("P_ID", inplace=True)
-        self.results_df = self.results_df.append(results)   
+        self.results_df = pd.concat([self.results_df, df_dictionary], ignore_index=True)   
    
             
     def write_all_results(self):
