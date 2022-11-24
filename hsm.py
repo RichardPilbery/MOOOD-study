@@ -119,7 +119,7 @@ class HSM:
         
     # Method to determine the current day, hour and weekday/weekend
     # based on starting day/hour and elapsed sim time
-    def date_time_of_call(start_dt, elapsed_time: int) -> list[int, int, str, int, pd.Timestamp]:
+    def date_time_of_call(self, start_dt: str, elapsed_time: int) -> list[int, int, str, int, pd.Timestamp]:
         """
         Calculate a range of time-based parameters given a specific date-time
 
