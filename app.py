@@ -1,3 +1,5 @@
+"""# MOOOD study"""
+
 from dash import Dash
 import dash_bootstrap_components as dbc
 from dash.long_callback import DiskcacheLongCallbackManager
