@@ -1,3 +1,4 @@
+.DS_Store
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -127,3 +128,23 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.Rproj.user
+
+# CSV files( can be big)
+data/all_results.csv
+data/wi_all_results.csv
+data/network_graph.csv
+data/wi_network_graph.csv
+
+.dockerenv
+bin/
+cache/
+dev/
+etc/
+proc/
+root/
+run/
+sbin/
+sys/
+tmp/
+usr/

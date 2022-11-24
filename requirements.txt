@@ -1,0 +1,13 @@
+# To ensure app dependencies are ported from your virtual environment/host machine into your container, run 'pip freeze > requirements.txt' in the terminal to overwrite this file
+dash[diskcache]
+dash-daq
+dash-bootstrap-components
+dash-core-components
+dash-html-components
+dash-cytoscape
+gunicorn
+pandas
+simpy
+numpy
+scipy
+scikit-learn
