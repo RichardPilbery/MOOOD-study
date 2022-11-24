@@ -11,3 +11,4 @@ simpy
 numpy
 scipy
 scikit-learn
+pdoc
