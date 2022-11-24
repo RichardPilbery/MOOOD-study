@@ -1,16 +1,10 @@
 # 111 Primary call disposition
-# Basic mode
-
-# Load packages
-
 import os
 import time
 from datetime import datetime
 import multiprocessing as mp
 import sys
 import logging
-
-from numpy import number
 
 try:
      __file__
@@ -93,20 +87,13 @@ def parallelProcess(nprocess = mp.cpu_count() - 1):
     global transition_type
     global ia_type
 
-    # file_loc = G.all_results_location if what_if_sim_run == 'No' else G.wi_all_results_location
-    # network_file_loc = G.network_graph_location if what_if_sim_run == 'No' else G.wi_network_graph_location
     file_locs = [G.all_results_location, G.wi_all_results_location, G.network_graph_location, G.wi_network_graph_location]
 
     [os.remove(x) for x in file_locs if os.path.isfile(x)]
 
-    # if os.path.isfile(G.all_results_location):
-    #     os.remove(G.all_results_location)
-    # if os.path.isfile(G.wi_all_results_location):
-    #     os.remove(G.all_results_location)
-    # if os.path.isfile(network_file_loc):
-    #     os.remove(network_file_loc)
     pool = mp.Pool(processes = nprocess)
     pool.starmap(runSim, zip(list(range(0, number_of_runs)), [number_of_runs] * number_of_runs, [sim_duration] * number_of_runs, [warm_up_time] * number_of_runs, [sim_start_date] * number_of_runs, [what_if_sim_run] * number_of_runs, [transition_type] * number_of_runs, [ia_type] * number_of_runs))
+
     logging.debug('Reached end of script')
     logging.shutdown()
 

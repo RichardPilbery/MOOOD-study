@@ -26,8 +26,6 @@ from transitions import Transitions
 # Health Care System model
 # as it relates to 111 patients
 
-
-
 class HSM:
     """
         # The health service model class
@@ -121,7 +119,7 @@ class HSM:
         
     # Method to determine the current day, hour and weekday/weekend
     # based on starting day/hour and elapsed sim time
-    def date_time_of_call(self, elapsed_time: int) -> list[int, int, str, int, pd.Timestamp]:
+    def date_time_of_call(start_dt, elapsed_time: int) -> list[int, int, str, int, pd.Timestamp]:
         """
         Calculate a range of time-based parameters given a specific date-time
 
@@ -137,7 +135,7 @@ class HSM:
         """
         # Elapsed_time = time in minutes since simulation started
 
-        start_dt = pd.to_datetime(self.start_dt)
+        start_dt = pd.to_datetime(start_dt)
 
         current_dt = start_dt + pd.Timedelta(elapsed_time, unit='min')
 
@@ -173,7 +171,7 @@ class HSM:
                 self.env.process(self.patient_journey(pt))
                 
                 # Get current day of week and hour of day
-                [dow, hod, weekday, qtr, current_dt] = self.date_time_of_call(self.env.now)
+                [dow, hod, weekday, qtr, current_dt] = self.date_time_of_call(self.start_dt, self.env.now)
 
                 # Update patient instance with time-based values so the current time is known
                 pt.day = dow
