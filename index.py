@@ -1,12 +1,9 @@
-from dash import Dash, dcc, html, Input, Output, State
-import dash_bootstrap_components as dbc
-import pandas as pd
-from app import app, server
+from dash import dcc, html, Input, Output
+from app import app
 from layouts import nav_bar, CONTENT_STYLE, footer 
 from results import results
 from homepage import home
 from simulation import simulation
-import callbacks
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -27,7 +24,8 @@ app.layout = html.Div([
 ])
 
 # This callback changes the layout of the page based on the URL
-# For each layout read the current URL page "http://127.0.0.1:8080/pagename" and return the layout
+# For each layout read the current URL page "http://0.0.0.0:8080/pathname" and return the layout
+
 @app.callback(Output('page-content', 'children'), #this changes the content
               [Input('url', 'pathname')]) #this listens for the url in use
 def display_page(pathname):

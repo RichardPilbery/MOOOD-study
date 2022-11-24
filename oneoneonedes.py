@@ -21,7 +21,7 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from g import G
-from hsm_model import HSM_Model
+from hsm import HSM
 
 number_of_runs = G.number_of_runs
 warm_up_time = G.warm_up_duration
@@ -42,12 +42,12 @@ def runSim(run, total_runs, sim_duration, warm_up_time, sim_start_date, what_if_
 
     print (f"{current_time()}: Run {run+1} of {total_runs}")
     logging.debug(f"{current_time()}: Run {run+1} of {total_runs}")
-    my_111_model = HSM_Model(run, sim_duration, warm_up_time, sim_start_date, what_if_sim_run, transition_type, ia_type)
+    my_111_model = HSM(run, sim_duration, warm_up_time, sim_start_date, what_if_sim_run, transition_type, ia_type)
     my_111_model.run()
     if what_if_sim_run == 'Yes':
         # If what if model running, also need to run it without to generate comparison results
         print("Starting what if is No simulation following Yes")
-        my_111_model = HSM_Model(run, sim_duration, warm_up_time, sim_start_date, "No", transition_type, ia_type)
+        my_111_model = HSM(run, sim_duration, warm_up_time, sim_start_date, "No", transition_type, ia_type)
         my_111_model.run()
 
     print(f'{current_time()}: Run {run+1} took {round((time.process_time() - start)/60, 1)} minutes to run')

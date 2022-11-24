@@ -37,8 +37,9 @@ class Caller:
         
         # Keep track of cumulatative time and exit after 4320 minutes i.e. 72 hours
         self.time_since_call = 0
-        # Keep track of time and day caller made call to 111
-        # These will all be updated when the patient is created
+
+        # Variables to keep track of time variables as the caller progresses through the model
+        # These are updated at every step
         self.hour = 0
         self.day = "Mon"
         self.qtr = 1

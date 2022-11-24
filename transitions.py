@@ -28,6 +28,7 @@ class Transitions:
         self.dt_model =  pickle.load(open('csv/decision_tree_model.sav', 'rb'))
         
         self.avoidable_ed_admission_df = pd.read_csv("csv/avoidable_admission_by_PC_outcome_GP_contact.csv")
+
         q_data = []
         with open("csv/queue_time_distributions.txt", "r") as inFile:
             q_data = ast.literal_eval(inFile.read())
@@ -43,22 +44,36 @@ class Transitions:
             inter_arrival_data = ast.literal_eval(inFile.read())
         self.inter_arrival_time_distr = inter_arrival_data
     
-    def next_destination(self, current_step, gp_timely_contact, quarter):
+    def next_destination(self, current_step: str, gp_timely_contact: str, quarter: int) -> str:
+        """
+        Determine the patient's next destination by sampling from previously determined  
+        distributions. These were calculated using the Fitter package
+        
+        """
+
+        # User defined option to use transition probabilities that were calculated taking
+        # yearly quarter into account.
         if self.transition_type == 'qtr':
             df = self.transition_probs_df[(self.transition_probs_df.SourceName == current_step) & (self.transition_probs_df.quarter == quarter)]
         else:
-           df = self.transition_probs_df[(self.transition_probs_df.SourceName == current_step)] 
+            # Ignore yearly quarter adjustment
+            df = self.transition_probs_df[(self.transition_probs_df.SourceName == current_step)] 
         
+        # There are separate transition probabilities for cases where a timely GP contact was
+        # made after the index 111 call
         weights = df.ProbGPYes if gp_timely_contact == "yes" else df.ProbGPNo 
-        random.choices(df.TargetName.tolist(), weights=weights.tolist())[0]
 
+        # Randomly sample a destination from the transition probabilities
         # End as current step should not trigger this function but just in case.
         return "End" if current_step == "End" else random.choices(df.TargetName.tolist(), weights=weights.tolist())[0]
 
-    def wait_time(self, current_activity, next_activity):
+    def wait_time(self, current_activity: str, next_activity: str) -> str :
+        """
+            Calculate the wait time in seconds before the next activity starts
+        """
 
+        # Prepare variable for distribution lookup.
         activity = f"{current_activity}_to_{next_activity}"
-        #print('Checking ' + activity)
 
         # Next step is End, so wait time can be 0
         if next_activity == "End":
@@ -80,22 +95,25 @@ class Transitions:
                 wait_time = q_time
                 break
 
-        #print(f"Distribution is {distr[0]} and Q time: {q_time}")
         return wait_time
 
-    def distribution_finder(self, activity, distribution_type = 'queue', ED_urgent = ''):
-        #print(f"Distribution finder has been sent {activity} and {distribution_type} and {ED_urgent}")
+    def distribution_finder(self, activity: str, distribution_type : str = 'queue', ED_urgent: str = '') -> list :
+        """
+            Look up function to retrieve distributions for queue times and activity duration times and
+            return them.
+        """
+
         distribution = {}
         return_list = []
 
+        # Select correct list depending on this distribution is being requested
         search_dict = self.queue_time_distr if distribution_type == 'queue' else self.activity_time_distr
 
-        #print(search_dict)
+        # There are separete distributions for urgent/non-urgent admissions, synonymous with non-avoidable/avoidable
+        # admissions
 
         if activity == 'ED':
             activity = f"{activity}_{ED_urgent}"
-
-        #print(f"Post ed urgent check: {activity}")
 
         for i in search_dict:
             for k,v in i.items():
@@ -103,14 +121,14 @@ class Transitions:
                     distribution = v
                     break
 
-        #print(f"Distribution is {distribution}")
-
         if len(distribution) > 0:
-            # There's a result
+            # Found a distribution, return the list
             for k,v in distribution.items():
                 return_list.append(k)
                 return_list.append(v)
                 break
+
+        # TODO: Handle cases where no distribution is found
             
         return return_list
 
@@ -187,7 +205,7 @@ class Transitions:
 
         return True if random.uniform(0, 1) < list(aa_prob)[0] else False
 
-    def next_destination_tree(self, current_step, pc_outcome, gp_timely_contact, quarter, last_one, ooh):
+    def next_destination_tree(self, current_step: str, pc_outcome: str, gp_timely_contact: str, quarter: int, last_one: str, ooh: str) -> str:
         model = pickle.load(open('csv/decision_tree_model.sav', 'rb'))
 
         #print(f"{current_step}, {pc_outcome}, {gp_timely_contact}, {quarter}, {last_one}, {ooh}")
