@@ -292,7 +292,7 @@ class HSM:
 
             if patient.activity == 'Index_IUC':
                 # As a one-off, capture the completed Index IUC call
-                self.add_patient_result_row(self, 'completed', patient, instance_id, ED_urgent)
+                self.add_patient_result_row('completed', patient, instance_id, ED_urgent)
             
             # Update current patient activity
             patient.activity = next_step
@@ -301,7 +301,7 @@ class HSM:
             # The time between this and 'start' will be the queue time
             # or wait time or time for the patient to have another
             # interaction with a healthcare service.
-            self.add_patient_result_row(self, 'scheduled', patient, instance_id, ED_urgent)
+            self.add_patient_result_row('scheduled', patient, instance_id, ED_urgent)
                 
             # Consult the wait_time function to find out how long until the next activity
             wait_time = self.t.wait_time(current_step, patient.activity)

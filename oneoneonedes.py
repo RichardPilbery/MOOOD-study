@@ -98,4 +98,4 @@ def parallelProcess(nprocess = mp.cpu_count() - 1):
     logging.shutdown()
 
 
-runSim(0, 1, 3, 1, "2021-01-01 00:00:00", "No", 'base', 'base')
+#runSim(0, 1, 3, 1, "2021-01-01 00:00:00", "No", 'base', 'base')
