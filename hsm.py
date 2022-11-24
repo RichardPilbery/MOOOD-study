@@ -326,7 +326,7 @@ class HSM:
 
     def step_visit(self, patient: Caller, instance_id: int, ED_urgent: str) -> None:
         """
-            Functino to retrieve activity time for duration, wait for visit to complete  
+            Function to retrieve activity time for duration, wait for visit to complete  
             then write result to `result_df`
         """
         
@@ -378,21 +378,29 @@ class HSM:
         self.results_df = pd.concat([self.results_df, df_dictionary], ignore_index=True)   
    
             
-    def write_all_results(self):
-        #print('Writing all results')
+    def write_all_results(self) -> None:
+        """
+            Writes the content of `result_df` to a csv file
+        """
         # https://stackoverflow.com/a/30991707/3650230
         
+        # Check if file exists...if it does, append data, otherwise create a new file with headers matching
+        # the column names of `results_df`
         if not os.path.isfile(self.all_results_location):
            self.results_df.to_csv(self.all_results_location, header='column_names')
         else: # else it exists so append without writing the header
             self.results_df.to_csv(self.all_results_location, mode='a', header=False) 
 
+        # Same as above except this is the network graph data
         if not os.path.isfile(self.network_graph_location):
            self.network_df.to_csv(self.network_graph_location, header='column_names', index=False)
         else: # else it exists so append without writing the header
             self.network_df.to_csv(self.network_graph_location, mode='a', header=False, index=False) 
     
-    def run(self):
+    def run(self) -> None:
+        """
+            Function to start the simulation. This function is called by the `runSim` function
+        """
         # Start entity generators
         self.env.process(self.generate_111_calls())
         
@@ -400,7 +408,6 @@ class HSM:
         self.env.run(until=(self.sim_duration + self.warm_up_duration + G.pt_time_in_sim))
         
         # Write run results to file
-        # self.write_run_results()
         self.write_all_results() 
         
 
