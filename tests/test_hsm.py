@@ -6,5 +6,5 @@ def test_date_time_of_call():
     assert HSM.date_time_of_call('2023-05-13 23:59:59', 60) == ['Sun', 0, 'weekend', 2, pd.Timestamp('2023-05-14 00:59:59')]
 
 
-def test_true_is_false():
-    assert True == False
+# def test_true_is_false():
+#     assert True == False
