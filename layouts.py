@@ -283,5 +283,12 @@ def tab_ed_content():
                 dcc.Graph(id='sim-ed-attend-volume')
             ]),
             html.Hr(),
+        ]),
+        dbc.Row([
+            html.H4('Proportion of ED attendances classified as avoidable', className='display-6'),
+            html.Div(id='prop_avoidable_admissions_table', className='pb-4'),
+            html.H4('ED attendances stratified by avoidable admission', className='display-6'),
+            html.Div(id='avoidable_admissions_table', className='pb-4'),
         ])
+
     ])

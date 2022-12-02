@@ -7,7 +7,7 @@ from oneoneonedes import parallelProcess, prepStartingVars
 import pandas as pd
 import plotly.express as px
 import numpy as np
-from utilities import create_cyto_graph, summary_stats, using_nth, quarterly_counts, draw_Sankey, draw_CB_Sankey, prep_draw_Sankey, vol_fig
+from utilities import create_cyto_graph, summary_stats, using_nth, quarterly_counts, draw_Sankey, draw_CB_Sankey, prep_draw_Sankey, vol_fig, prep_admissions_table
 
 buttonClickCount = 0
 
@@ -409,3 +409,28 @@ def fig_qtr_tab_counts(what_if_sim_run, run_number = 999):
 
     return dash_table.DataTable(data=table, columns=columns, export_format="csv",)
 
+
+
+# Tabulate Avoidable admission data
+@app.callback(
+    Output('avoidable_admissions_table', 'children'), 
+    State('what_if_sim_run', 'data'),
+    Input('dropdown-run-number', 'value')
+)
+def avoid_adm_tab_counts(what_if_sim_run, run_number = 999):
+    
+    table_prep = prep_admissions_table(what_if_sim_run, run_number, type='count')
+
+    return dash_table.DataTable(data=table_prep[0], columns=table_prep[1], export_format="csv")
+
+# Tabulate Avoidable admission data
+@app.callback(
+    Output('prop_avoidable_admissions_table', 'children'), 
+    State('what_if_sim_run', 'data'),
+    Input('dropdown-run-number', 'value')
+)
+def avoid_adm_tab_counts(what_if_sim_run, run_number = 999):
+    
+    table_prep = prep_admissions_table(what_if_sim_run, run_number, type='prop')
+
+    return dash_table.DataTable(data=table_prep[0], columns=table_prep[1], export_format="csv")

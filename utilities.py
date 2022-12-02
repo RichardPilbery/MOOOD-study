@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+import numpy as np
 
 # This function will create a json array for cytoscape
 # The nodes and edges will be extracted from the csv files and the elements returned.
@@ -301,3 +302,102 @@ def vol_fig(df, thetitle, run_number, sim = True):
     fig.update_xaxes(tickvals=list(range(0, 24, 1)))
 
     return fig
+
+
+def ooh(x) -> str:
+    """
+    Determine whether the patient's index 111 call is in-hours or out-of-hours (ooh)
+    
+    """
+    #print(f"X is {x[0]} and hour is {x[1]}")
+    if (x[0] != 'weekday'):
+        return 'ooh'
+    elif x[1] < 8:
+        return 'ooh'
+    elif x[1] > 18:
+        return 'ooh'
+    else:
+        return 'in-hours'
+
+
+def calc_prop_avoidable_admissions(df):
+    """
+    Calculates the proportion of non_urgent (avoidable) ED admissions.
+    
+    Arguments:
+    ----------
+        df (pandas dataframe)
+        
+    Returns:
+    --------
+        df (pandas dataframe): a dataframe with the proportion value appended as an additional column
+    """
+
+    df['count'] = df['pc_outcome'][df['avoidable'] != 'urgent']/df['pc_outcome'].sum()
+    df1 = df.drop(['avoidable'], axis = 1).drop_duplicates()
+
+    return(df1)
+
+
+def avoidable_admission_count(sim_data, sim_data_type = 'Simulation', type='count') :
+    sim_data2 = sim_data[['pc_outcome', 'hour', 'weekday','run_number', 'age', 'sex', 'gp_contact', 'avoidable']][(sim_data['status'] == 'start') & (sim_data['avoidable'] != 'not applicable')]
+
+    sim_data2['ooh'] = sim_data2[['weekday', 'hour']].apply(ooh, axis = 1)
+    sim_data2['count'] = sim_data2['pc_outcome']
+
+    sim_data3 = sim_data2.groupby(['run_number','ooh','gp_contact', 'avoidable', 'sex'], as_index = False).count()
+
+    if type == 'prop':
+         sim_data3 = sim_data3.groupby(['run_number', 'ooh','gp_contact', 'sex'], as_index=False).apply(lambda x : calc_prop_avoidable_admissions(x))
+         sim_data4 = sim_data3.groupby(['ooh','gp_contact', 'sex'], as_index=False)['count'].agg(['mean', 'sem']).reset_index()
+    else:
+        sim_data4 = sim_data3.groupby(['ooh','gp_contact', 'avoidable', 'sex'], as_index=False)['count'].agg(['mean', 'sem']).reset_index()
+
+    sim_data4['data'] = sim_data_type
+
+    if type == 'prop':
+        sim_data4['Upper_95_CI'] = round(100 * sim_data4['mean'] + 1.96 * 100 * sim_data4['sem'],1)
+        sim_data4['Lower_95_CI'] = round(sim_data4['mean'] - 1.96 * 100 * sim_data4['sem'],1)
+        sim_data4['mean'] = round(100 * sim_data4['mean'],1)
+        sim_data4['count'] = sim_data4['mean']
+    else:
+        sim_data4['Upper_95_CI'] = round(sim_data4['mean'] + 1.96* sim_data4['sem'],1)
+        sim_data4['Lower_95_CI'] = round(sim_data4['mean'] - 1.96* sim_data4['sem'],1)
+        sim_data4['count'] = sim_data4['mean'].map(lambda x: round(x)) # Alternative method to round, but not necessary
+        sim_data4['mean'] = round(sim_data4['mean'],1)
+
+    return sim_data4
+
+def prep_admissions_table(what_if_sim_run, run_number = 999, type='count'):
+    # TODO: Handle case when there is no CSV file yet
+    df = pd.read_csv('data/all_results.csv')
+
+    if (what_if_sim_run == 'Yes'):
+        wi_df = pd.read_csv('data/wi_all_results.csv')
+        wi_df1 = wi_df if run_number == 999 else wi_df[wi_df['run_number'] == run_number]
+        wi_df2 = avoidable_admission_count(wi_df1, 'What if', type)
+
+    else:
+        wi_df2 = None
+
+    df1 = df if run_number == 999 else df[df['run_number'] == run_number]
+    df2 = avoidable_admission_count(df1, 'Simulation', type)
+
+    tabdata = pd.concat([df2, wi_df2], axis=0, ignore_index=True) 
+
+    tabdata['combo'] = np.where(tabdata['data'] == 'cYorkshire2021', tabdata['count'], tabdata['mean'].astype(str) + ' (' + tabdata['Lower_95_CI'].astype(str) + '-' + tabdata['Upper_95_CI'].astype(str) + ')')
+
+    #print(tabdata.head())
+
+    if type == 'prop':
+        tabdata2 = tabdata.pivot(index=['ooh', 'gp_contact', 'sex'], columns="data", values="combo").reset_index()
+    else:
+        tabdata2 = tabdata.pivot(index=['avoidable', 'ooh', 'gp_contact', 'sex'], columns="data", values="combo").reset_index()
+
+    table_cols = tabdata2.columns
+
+    table = tabdata2.loc[:, table_cols].to_dict('rows')
+
+    columns = [{"name": i, "id": i,} for i in (table_cols)]
+
+    return [table, columns]
