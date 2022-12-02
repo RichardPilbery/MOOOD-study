@@ -333,33 +333,37 @@ def calc_prop_avoidable_admissions(df):
         df (pandas dataframe): a dataframe with the proportion value appended as an additional column
     """
 
-    df['count'] = df['pc_outcome'][df['avoidable'] != 'urgent']/df['pc_outcome'].sum()
+    df['proportion'] = df['pc_outcome'][df['avoidable'] != 'urgent']/df['pc_outcome'].sum()
+    df['n'] = df['pc_outcome'].sum()
     df1 = df.drop(['avoidable'], axis = 1).drop_duplicates()
 
     return(df1)
 
 
 def avoidable_admission_count(sim_data, sim_data_type = 'Simulation', type='count') :
-    sim_data2 = sim_data[['pc_outcome', 'hour', 'weekday','run_number', 'age', 'sex', 'gp_contact', 'avoidable']][(sim_data['status'] == 'start') & (sim_data['avoidable'] != 'not applicable')]
+    sim_data2 = sim_data[['pc_outcome', 'hour', 'weekday','run_number', 'gp_contact', 'avoidable']][(sim_data['status'] == 'start') & (sim_data['avoidable'] != 'not applicable')]
 
     sim_data2['ooh'] = sim_data2[['weekday', 'hour']].apply(ooh, axis = 1)
     sim_data2['count'] = sim_data2['pc_outcome']
 
-    sim_data3 = sim_data2.groupby(['run_number','ooh','gp_contact', 'avoidable', 'sex'], as_index = False).count()
+    sim_data3 = sim_data2.groupby(['run_number','ooh','gp_contact', 'avoidable'], as_index = False).count()
+
 
     if type == 'prop':
-         sim_data3 = sim_data3.groupby(['run_number', 'ooh','gp_contact', 'sex'], as_index=False).apply(lambda x : calc_prop_avoidable_admissions(x))
-         sim_data4 = sim_data3.groupby(['ooh','gp_contact', 'sex'], as_index=False)['count'].agg(['mean', 'sem']).reset_index()
+         sim_data3 = sim_data3.groupby(['run_number', 'ooh','gp_contact'], as_index=False).apply(lambda x : calc_prop_avoidable_admissions(x))
+         sim_data4 = sim_data3.groupby(['ooh','gp_contact'], as_index=False).agg(proportion=pd.NamedAgg('proportion', 'mean'), n = pd.NamedAgg('n', 'mean')).reset_index()
     else:
-        sim_data4 = sim_data3.groupby(['ooh','gp_contact', 'avoidable', 'sex'], as_index=False)['count'].agg(['mean', 'sem']).reset_index()
+        sim_data4 = sim_data3.groupby(['ooh','gp_contact', 'avoidable'], as_index=False)['count'].agg(['mean', 'sem']).reset_index()
 
     sim_data4['data'] = sim_data_type
 
     if type == 'prop':
-        sim_data4['Upper_95_CI'] = round(100 * sim_data4['mean'] + 1.96 * 100 * sim_data4['sem'],1)
-        sim_data4['Lower_95_CI'] = round(sim_data4['mean'] - 1.96 * 100 * sim_data4['sem'],1)
-        sim_data4['mean'] = round(100 * sim_data4['mean'],1)
-        sim_data4['count'] = sim_data4['mean']
+        sim_data4['sqrt_part'] = np.sqrt((sim_data4['proportion']/(1-sim_data4['proportion']))/sim_data4['n'])
+        sim_data4['Upper_95_CI'] = round(100 * (sim_data4['proportion'] + (1.96 * sim_data4['sqrt_part'])),1)
+        sim_data4['Lower_95_CI'] = round(100 * (sim_data4['proportion'] - (1.96 * sim_data4['sqrt_part'])),1)
+        sim_data4['proportion'] = round(100 * sim_data4['proportion'],1)
+        sim_data4['n'] = round(sim_data4['n'])
+
     else:
         sim_data4['Upper_95_CI'] = round(sim_data4['mean'] + 1.96* sim_data4['sem'],1)
         sim_data4['Lower_95_CI'] = round(sim_data4['mean'] - 1.96* sim_data4['sem'],1)
@@ -374,7 +378,7 @@ def prep_admissions_table(what_if_sim_run, run_number = 999, type='count'):
 
     if (what_if_sim_run == 'Yes'):
         wi_df = pd.read_csv('data/wi_all_results.csv')
-        wi_df1 = wi_df if run_number == 999 else wi_df[wi_df['run_number'] == run_number]
+        wi_df1 = wi_df if run_number == 999 else df[df['run_number'] == run_number]
         wi_df2 = avoidable_admission_count(wi_df1, 'What if', type)
 
     else:
@@ -385,14 +389,19 @@ def prep_admissions_table(what_if_sim_run, run_number = 999, type='count'):
 
     tabdata = pd.concat([df2, wi_df2], axis=0, ignore_index=True) 
 
-    tabdata['combo'] = np.where(tabdata['data'] == 'cYorkshire2021', tabdata['count'], tabdata['mean'].astype(str) + ' (' + tabdata['Lower_95_CI'].astype(str) + '-' + tabdata['Upper_95_CI'].astype(str) + ')')
+    #print(tabdata.head())
+
+    if type == 'prop':
+        tabdata['combo'] = np.where(tabdata['data'] == 'cYorkshire2021', tabdata['proportion'], tabdata['proportion'].astype(str) + ' (' + tabdata['Lower_95_CI'].astype(str) + '-' + tabdata['Upper_95_CI'].astype(str) + ')')
+    else:
+        tabdata['combo'] = np.where(tabdata['data'] == 'cYorkshire2021', tabdata['count'], tabdata['mean'].astype(str) + ' (' + tabdata['Lower_95_CI'].astype(str) + '-' + tabdata['Upper_95_CI'].astype(str) + ')')
 
     #print(tabdata.head())
 
     if type == 'prop':
-        tabdata2 = tabdata.pivot(index=['ooh', 'gp_contact', 'sex'], columns="data", values="combo").reset_index()
+        tabdata2 = tabdata.pivot(index=['ooh', 'gp_contact'], columns="data", values="combo").reset_index()
     else:
-        tabdata2 = tabdata.pivot(index=['avoidable', 'ooh', 'gp_contact', 'sex'], columns="data", values="combo").reset_index()
+        tabdata2 = tabdata.pivot(index=['avoidable', 'ooh', 'gp_contact'], columns="data", values="combo").reset_index()
 
     table_cols = tabdata2.columns
 
