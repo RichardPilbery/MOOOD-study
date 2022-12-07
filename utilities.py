@@ -375,6 +375,8 @@ def avoidable_admission_count(sim_data, sim_data_type = 'Simulation', type='coun
 def prep_admissions_table(what_if_sim_run, run_number = 999, type='count'):
     # TODO: Handle case when there is no CSV file yet
     df = pd.read_csv('data/all_results.csv')
+    cb_df = pd.read_csv('csv/cb_ed_attendance_avoidable.csv') if type == 'count' else pd.read_csv('csv/cb_ed_attendance_avoidable_prop.csv')
+    cb_df['data'] = 'cYorkshire2021'
 
     if (what_if_sim_run == 'Yes'):
         wi_df = pd.read_csv('data/wi_all_results.csv')
@@ -387,14 +389,15 @@ def prep_admissions_table(what_if_sim_run, run_number = 999, type='count'):
     df1 = df if run_number == 999 else df[df['run_number'] == run_number]
     df2 = avoidable_admission_count(df1, 'Simulation', type)
 
-    tabdata = pd.concat([df2, wi_df2], axis=0, ignore_index=True) 
+    tabdata = pd.concat([df2, wi_df2, cb_df], axis=0, ignore_index=True) 
 
-    #print(tabdata.head())
+    
+    print(tabdata)
 
     if type == 'prop':
         tabdata['combo'] = np.where(tabdata['data'] == 'cYorkshire2021', tabdata['proportion'], tabdata['proportion'].astype(str) + ' (' + tabdata['Lower_95_CI'].astype(str) + '-' + tabdata['Upper_95_CI'].astype(str) + ')')
     else:
-        tabdata['combo'] = np.where(tabdata['data'] == 'cYorkshire2021', tabdata['count'], tabdata['mean'].astype(str) + ' (' + tabdata['Lower_95_CI'].astype(str) + '-' + tabdata['Upper_95_CI'].astype(str) + ')')
+        tabdata['combo'] = np.where(tabdata['data'] == 'cYorkshire2021', tabdata['n'], tabdata['mean'].astype(str) + ' (' + tabdata['Lower_95_CI'].astype(str) + '-' + tabdata['Upper_95_CI'].astype(str) + ')')
 
     #print(tabdata.head())
 

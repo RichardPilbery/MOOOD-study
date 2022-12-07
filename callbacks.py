@@ -37,8 +37,6 @@ buttonClickCount = 0
 def configSim(run_sim, sim_duration, warm_up_time, number_of_runs, sim_start_date, what_if_sim_run, transition_type_value, ia_time_value):
     # Run the sim
     logging.debug("Run the sim")
-    # print(f"Config sim and date is: {sim_start_date}")
-    #print(f"Config sim and what if is: {what_if_sim_run}")
 
     global buttonClickCount
 
@@ -407,7 +405,30 @@ def fig_qtr_tab_counts(what_if_sim_run, run_number = 999):
 
     #print(dash_table.DataTable(data=table, columns=columns))
 
-    return dash_table.DataTable(data=table, columns=columns, export_format="csv",)
+    return dash_table.DataTable(
+        data=table, 
+        columns=columns, 
+        export_format="csv",
+        style_table={
+            'color': 'black',
+            'backgroundColor': 'white',
+            'font-family': 'Arial, Helvetica, sans-serif'
+        },
+        style_data={
+            'font-family': 'Arial, Helvetica, sans-serif'
+        },
+        style_data_conditional=[
+            {
+                'if': {'row_index': 'odd'},
+                'backgroundColor': 'rgb(220, 220, 220)',
+            }
+        ],
+        style_header={
+            'backgroundColor': 'rgb(210, 210, 210)',
+            'fontWeight': 'bold',
+            'font-family': 'Arial, Helvetica, sans-serif'
+        }
+    )
 
 
 
