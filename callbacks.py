@@ -10,6 +10,7 @@ import numpy as np
 from utilities import create_cyto_graph, summary_stats, using_nth, quarterly_counts, draw_Sankey, draw_CB_Sankey, prep_draw_Sankey, vol_fig, prep_admissions_table
 from g import G
 from os.path import exists
+from dash.exceptions import PreventUpdate
 
 buttonClickCount = 0
 
@@ -43,8 +44,8 @@ def configSim(run_sim, sim_duration, warm_up_time, number_of_runs, sim_start_dat
     global buttonClickCount
 
     if run_sim > buttonClickCount:
-        logging.debug('run_sum > buttonClickCount')
-        print('run_sum > buttonClickCount')
+        logging.debug('run_sim > buttonClickCount')
+        print('run_sim > buttonClickCount')
         print(f"Sim duration {sim_duration} and warm up {warm_up_time}")
         buttonClickCount = run_sim
         prepStartingVars(
@@ -64,19 +65,39 @@ def configSim(run_sim, sim_duration, warm_up_time, number_of_runs, sim_start_dat
 
 # Save what if radio button into storage
 @app.callback(
-    Output('what_if_sim_run', 'data'),
-    Input('what_if_sim_run_value', 'value')
-)
-def save_what_if_local_storage(what_if_sim_run_value):
-    return what_if_sim_run_value
-
-# Save what if radio button into storage
-@app.callback(
+    Output('sim_start_date_store', 'data'),
+    Output('sim_duration_store', 'data'),
+    Output('warm_up_duration_store', 'data'),
     Output('store-num-runs', 'data'),
-    Input('number_of_runs', 'value')
+    Output('what_if_sim_run_store', 'data'),
+    Output('transition_type_store', 'data'),
+    Output('ia_time_store', 'data'),
+
+    Input('run_sim', 'n_clicks'),
+
+    State('sim_start_date', 'date'),
+    State('sim_duration', 'value'),
+    State('warm_up_time', 'value'),
+    State('number_of_runs', 'value'),
+    State('what_if_sim_run_value', 'value'),
+    State('transition_type_value', 'value'),
+    State('ia_time_value', 'value')
+
 )
-def save_runs_local_storage(number_of_runs):
-    return number_of_runs
+def save_to_local_storage(run_sim, sim_start_date, sim_duration, warm_up_time, number_of_runs, what_if_sim_run_value, transition_type_value, ia_time_value):
+    # Sim complete is set to -1 on a refresh
+    # We only want to update local storage if the
+    # sim button has been pressed and so value has been set to 0
+    print(f"Submit button clicked, updating local storage {run_sim}")
+    global buttonClickCount
+
+    if run_sim > buttonClickCount:
+        return [sim_start_date, sim_duration, warm_up_time, number_of_runs, what_if_sim_run_value, transition_type_value, ia_time_value]
+    else:
+        raise PreventUpdate
+
+
+
 
 # Update Summary stats on Results > Outcome page
 @app.callback(
@@ -102,16 +123,32 @@ def save_runs_local_storage(number_of_runs):
     Output('wi-visible-999-summary-stat', 'style'), 
     Output('wi-visible-111-summary-stat', 'style'), 
     Output('wi-visible-none-summary-stat', 'style'), 
+
+    Output('sim_start_date_state', 'children'),
+    Output('sim_duration_state', 'children'),
+    Output('warm_up_duration_state', 'children'),
+    Output('store-num-runs_value', 'children'),
+    Output('transition_type_state', 'children'),
+    Output('ia_time_state', 'children'),
+
     Input('dropdown-run-number', 'value'),
-    State('what_if_sim_run', 'data'),
+
+    State('sim_start_date_store', 'data'),
+    State('sim_duration_store', 'data'),
+    State('warm_up_duration_store', 'data'),
+    State('store-num-runs', 'data'),
+    State('what_if_sim_run_store', 'data'),
+    State('transition_type_store', 'data'),
+    State('ia_time_store', 'data'),
+    
 )
-def summary_stat_page_content(run_number, what_if_sim_run):
+def summary_stat_page_content(run_number, sim_start_date, sim_duration, warm_up_time, number_of_runs, what_if_sim_run, transition_type, ia_time):
     values_dict = summary_stats(what_if_sim_run, run_number)
     # print(values_dict.keys())
 
     wi_visibility = {'display':'block'}
     
-    if 'wi_GP' not in values_dict.keys():
+    if what_if_sim_run == 'No':
         wi_visibility = {'display':'none'} 
         values_dict['wi_GP'] = None
         values_dict['wi_ED'] = None
@@ -119,7 +156,7 @@ def summary_stat_page_content(run_number, what_if_sim_run):
         values_dict['wi_IUC'] = None
         values_dict['wi_End'] = None
 
-    return values_dict['total'], values_dict['GP'], values_dict['ED'], values_dict['999'], values_dict['IUC'], values_dict['End'], values_dict['wi_GP'], values_dict['wi_ED'], values_dict['wi_999'], values_dict['wi_IUC'], values_dict['wi_End'],values_dict['cb_total'], values_dict['cb_GP'], values_dict['cb_ED'], values_dict['cb_999'], values_dict['cb_IUC'], values_dict['cb_End'], wi_visibility, wi_visibility, wi_visibility, wi_visibility, wi_visibility
+    return values_dict['total'], values_dict['GP'], values_dict['ED'], values_dict['999'], values_dict['IUC'], values_dict['End'], values_dict['wi_GP'], values_dict['wi_ED'], values_dict['wi_999'], values_dict['wi_IUC'], values_dict['wi_End'],values_dict['cb_total'], values_dict['cb_GP'], values_dict['cb_ED'], values_dict['cb_999'], values_dict['cb_IUC'], values_dict['cb_End'], wi_visibility, wi_visibility, wi_visibility, wi_visibility, wi_visibility, sim_start_date, sim_duration, warm_up_time, number_of_runs, transition_type, ia_time
 
 
 
@@ -127,7 +164,7 @@ def summary_stat_page_content(run_number, what_if_sim_run):
 # Update figure based on run number chosen
 @app.callback(
     Output('age-dist', 'figure'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value'),
 )
 def fig_age_dist(what_if_sim_run, run_number = 999):
@@ -208,7 +245,7 @@ def dropdown_run_number(url, num_runs):
 # Update figure to show call activity
 @app.callback(
     Output('ooo-call-volume', 'figure'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value')
 )
 def fig_call_vol(what_if_sim_run, run_number = 999):
@@ -231,7 +268,7 @@ def fig_call_vol(what_if_sim_run, run_number = 999):
 # Update figure to show simulated call activity
 @app.callback(
     Output('sim-ooo-call-volume', 'figure'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value')
 )
 def sim_fig_call_vol(what_if_sim_run, run_number = 999):
@@ -253,7 +290,7 @@ def sim_fig_call_vol(what_if_sim_run, run_number = 999):
 # Update ED figure to show call activity
 @app.callback(
     Output('ed-attend-volume', 'figure'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value')
 )
 def ed_attend_vol(what_if_sim_run, run_number = 999):
@@ -271,7 +308,7 @@ def ed_attend_vol(what_if_sim_run, run_number = 999):
 # Update figure to show ED simulated call activity
 @app.callback(
     Output('sim-ed-attend-volume', 'figure'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value')
 )
 def sim_ed_attend_vol(what_if_sim_run, run_number = 999):
@@ -293,7 +330,7 @@ def sim_ed_attend_vol(what_if_sim_run, run_number = 999):
 @app.callback(
     Output('network-graph', 'elements'), 
     Input('dropdown-run-number', 'value'),
-    State('what_if_sim_run', 'data')
+    State('what_if_sim_run_store', 'data')
 )
 def network_graph_draw(run_number, what_if_sim_run):
     elements = create_cyto_graph(what_if_sim_run, run_number)
@@ -306,7 +343,7 @@ def network_graph_draw(run_number, what_if_sim_run):
     Output('sankey-diagram', 'figure'), 
     Output('wi-sankey-diagram', 'figure'), 
     Output('cb-sankey-diagram', 'figure'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value'),
 )
 def sankey(what_if_sim_run, run_number = 999):
@@ -333,7 +370,7 @@ def sankey(what_if_sim_run, run_number = 999):
 @app.callback(
     Output("download-network-analysis", "data"),
     Input("btn-download-network-analysis", "n_clicks"),
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     prevent_initial_call=True,
 )
 def downloadNetworkAnalysis(n_clicks, what_if_sim_run):
@@ -347,7 +384,7 @@ def downloadNetworkAnalysis(n_clicks, what_if_sim_run):
 # Update figure to show call activity
 @app.callback(
     Output('quarterly_counts_figure', 'figure'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value')
 )
 def fig_qtr_counts(what_if_sim_run, run_number = 999):
@@ -383,7 +420,7 @@ def fig_qtr_counts(what_if_sim_run, run_number = 999):
 # Tabulate quarterly count data
 @app.callback(
     Output('quarterly_counts_table', 'children'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value')
 )
 def fig_qtr_tab_counts(what_if_sim_run, run_number = 999):
@@ -451,7 +488,7 @@ def fig_qtr_tab_counts(what_if_sim_run, run_number = 999):
 # Tabulate Avoidable admission data
 @app.callback(
     Output('avoidable_admissions_table', 'children'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value')
 )
 def avoid_adm_tab_counts(what_if_sim_run, run_number = 999):
@@ -463,7 +500,7 @@ def avoid_adm_tab_counts(what_if_sim_run, run_number = 999):
 # Tabulate Avoidable admission data
 @app.callback(
     Output('prop_avoidable_admissions_table', 'children'), 
-    State('what_if_sim_run', 'data'),
+    State('what_if_sim_run_store', 'data'),
     Input('dropdown-run-number', 'value')
 )
 def avoid_adm_tab_counts(what_if_sim_run, run_number = 999):

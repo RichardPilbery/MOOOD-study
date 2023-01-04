@@ -9,7 +9,7 @@ from os.path import exists
 # The nodes and edges will be extracted from the csv files and the elements returned.
 def create_cyto_graph(what_if_sim_run, run_number = 999, graph_type = 'sim'):
     nodeData = pd.read_csv(G.cb_node_list, low_memory=False)
-    edgeData = pd.read_csv(G.network_graph_location, low_memory=False, index_col=False) if (graph_type == 'sim') else pd.read_csv("data/wi_network_graph.csv", low_memory=False, index_col=False)
+    edgeData = pd.read_csv(G.network_graph_location, low_memory=False, index_col=False) if (graph_type == 'sim') else pd.read_csv(G.wi_network_graph_location, low_memory=False, index_col=False)
 
     if run_number == 999:
         edgeData2 = edgeData.groupby(['source', 'target'], as_index=False).agg(weight = pd.NamedAgg(column='weight', aggfunc='mean'))

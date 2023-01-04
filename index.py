@@ -15,8 +15,13 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # A horizontal navigation bar on the left side with page content on the right.
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False), #this locates this structure to the url
+    dcc.Store(id='sim_start_date_store', storage_type='local'),
+    dcc.Store(id='sim_duration_store', storage_type='local'),
+    dcc.Store(id='warm_up_duration_store', storage_type='local'),
     dcc.Store(id='store-num-runs', storage_type='local'),
-    dcc.Store(id='what_if_sim_run', storage_type='local'),
+    dcc.Store(id='what_if_sim_run_store', storage_type='local'),
+    dcc.Store(id='transition_type_store', storage_type='local'),
+    dcc.Store(id='ia_time_store', storage_type='local'),
     html.Div([
         nav_bar(),
         html.Div(id='page-content',style=CONTENT_STYLE), #we'll use a callback to change the layout of this section 

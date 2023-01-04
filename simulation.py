@@ -131,7 +131,7 @@ simulation = html.Div([
                                 dcc.Input(
                                     id="sim_complete", 
                                     type="hidden", 
-                                    value=0,
+                                    value=-1,
                                 ),
                                 dcc.Input(
                                     id="toggle_button", 
