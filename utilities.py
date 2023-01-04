@@ -2,13 +2,14 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
+from g import G
+from os.path import exists
 
 # This function will create a json array for cytoscape
 # The nodes and edges will be extracted from the csv files and the elements returned.
-def create_cyto_graph(what_if_sim_run, run_number = 999):
-    nodeData = pd.read_csv("data/cb_node_list.csv", low_memory=False)
-    #edges_1 = pd.read_csv("cb_edge_list.csv", low_memory=False)
-    edgeData = pd.read_csv("data/network_graph.csv", low_memory=False, index_col=False) if (what_if_sim_run == 'No') else pd.read_csv("data/wi_network_graph.csv", low_memory=False, index_col=False)
+def create_cyto_graph(what_if_sim_run, run_number = 999, graph_type = 'sim'):
+    nodeData = pd.read_csv(G.cb_node_list, low_memory=False)
+    edgeData = pd.read_csv(G.network_graph_location, low_memory=False, index_col=False) if (graph_type == 'sim') else pd.read_csv("data/wi_network_graph.csv", low_memory=False, index_col=False)
 
     if run_number == 999:
         edgeData2 = edgeData.groupby(['source', 'target'], as_index=False).agg(weight = pd.NamedAgg(column='weight', aggfunc='mean'))
@@ -55,9 +56,9 @@ def create_cyto_graph(what_if_sim_run, run_number = 999):
 
 def summary_stats(what_if_sim_run, run_number = 999):
     print(f"What is sim sun is : {what_if_sim_run}")
-    nodeData = pd.read_csv("data/cb_node_list.csv", low_memory=False)
-    cbEdgeData = pd.read_csv("csv/transition_probs_gp_added.csv", low_memory=False)
-    edgeData = pd.read_csv("data/network_graph.csv", low_memory=False, index_col=False) 
+    nodeData = pd.read_csv(G.cb_node_list, low_memory=False)
+    cbEdgeData = pd.read_csv(G.transition_probs_gp_added)
+    edgeData = pd.read_csv(G.network_graph_location, low_memory=False, index_col=False) 
 
     cbdata = cbEdgeData[cbEdgeData['source'] == 6]
     data = edgeData[edgeData['source'] == 6]
@@ -79,8 +80,8 @@ def summary_stats(what_if_sim_run, run_number = 999):
     }
     wi_return_dict = {}
 
-    if (what_if_sim_run == 'Yes'):
-        wi_edgeData = pd.read_csv("data/wi_network_graph.csv", low_memory=False, index_col=False) 
+    if (what_if_sim_run == 'Yes' and exists(G.wi_network_graph_location)):
+        wi_edgeData = pd.read_csv(G.wi_network_graph_location, index_col=False) 
         wi_data = wi_edgeData[wi_edgeData['source'] == 6]
         if run_number != 999:
             wi_data = wi_data[wi_data['run_number'] == run_number]
@@ -168,7 +169,7 @@ def draw_Sankey(sorted_labels, colorList, short_name, source, target, value):
 
 
 def draw_CB_Sankey():
-    df = pd.read_csv('./data/cb_sankey.csv')
+    df = pd.read_csv(G.cb_sankey_data)
 
     nodelist = {
         'Index_IUC' : 'rgba(45, 87, 100, 0.8)',
@@ -374,15 +375,17 @@ def avoidable_admission_count(sim_data, sim_data_type = 'Simulation', type='coun
 
 def prep_admissions_table(what_if_sim_run, run_number = 999, type='count'):
     # TODO: Handle case when there is no CSV file yet
-    df = pd.read_csv('data/all_results.csv')
-    cb_df = pd.read_csv('csv/cb_ed_attendance_avoidable.csv') if type == 'count' else pd.read_csv('csv/cb_ed_attendance_avoidable_prop.csv')
+    #print(f"Type is {type}")
+    df = pd.read_csv(G.all_results_location)
+    cb_df = pd.read_csv(G.cb_ed_attedance_avoidable) if type == 'count' else pd.read_csv(G.cb_ed_attendance_avoidable_prop)
     cb_df['data'] = 'cYorkshire2021'
 
+    #print(cb_df.head())
+
     if (what_if_sim_run == 'Yes'):
-        wi_df = pd.read_csv('data/wi_all_results.csv')
+        wi_df = pd.read_csv(G.wi_all_results_location)
         wi_df1 = wi_df if run_number == 999 else df[df['run_number'] == run_number]
         wi_df2 = avoidable_admission_count(wi_df1, 'What if', type)
-
     else:
         wi_df2 = None
 
@@ -391,8 +394,7 @@ def prep_admissions_table(what_if_sim_run, run_number = 999, type='count'):
 
     tabdata = pd.concat([df2, wi_df2, cb_df], axis=0, ignore_index=True) 
 
-    
-    print(tabdata)
+    #print(tabdata)
 
     if type == 'prop':
         tabdata['combo'] = np.where(tabdata['data'] == 'cYorkshire2021', tabdata['proportion'], tabdata['proportion'].astype(str) + ' (' + tabdata['Lower_95_CI'].astype(str) + '-' + tabdata['Upper_95_CI'].astype(str) + ')')

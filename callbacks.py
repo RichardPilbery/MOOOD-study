@@ -8,6 +8,8 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 from utilities import create_cyto_graph, summary_stats, using_nth, quarterly_counts, draw_Sankey, draw_CB_Sankey, prep_draw_Sankey, vol_fig, prep_admissions_table
+from g import G
+from os.path import exists
 
 buttonClickCount = 0
 
@@ -105,10 +107,17 @@ def save_runs_local_storage(number_of_runs):
 )
 def summary_stat_page_content(run_number, what_if_sim_run):
     values_dict = summary_stats(what_if_sim_run, run_number)
-    #print(values_dict)
+    # print(values_dict.keys())
 
-    wi_visibility = {'display':'none'} if values_dict['wi_GP'] is None else {'display':'block'}
-    #print(wi_visibility)
+    wi_visibility = {'display':'block'}
+    
+    if 'wi_GP' not in values_dict.keys():
+        wi_visibility = {'display':'none'} 
+        values_dict['wi_GP'] = None
+        values_dict['wi_ED'] = None
+        values_dict['wi_999'] = None
+        values_dict['wi_IUC'] = None
+        values_dict['wi_End'] = None
 
     return values_dict['total'], values_dict['GP'], values_dict['ED'], values_dict['999'], values_dict['IUC'], values_dict['End'], values_dict['wi_GP'], values_dict['wi_ED'], values_dict['wi_999'], values_dict['wi_IUC'], values_dict['wi_End'],values_dict['cb_total'], values_dict['cb_GP'], values_dict['cb_ED'], values_dict['cb_999'], values_dict['cb_IUC'], values_dict['cb_End'], wi_visibility, wi_visibility, wi_visibility, wi_visibility, wi_visibility
 
@@ -123,7 +132,11 @@ def summary_stat_page_content(run_number, what_if_sim_run):
 )
 def fig_age_dist(what_if_sim_run, run_number = 999):
     # TODO: Handle case when there is no CSV file yet
-    df = pd.read_csv('data/all_results.csv') if (what_if_sim_run == 'No') else pd.read_csv('data/wi_all_results.csv')
+    df = pd.read_csv(G.all_results_location) 
+    
+    if (what_if_sim_run == 'Yes' and exists(G.wi_all_results_location)):
+        df = pd.read_csv(G.wi_all_results_location)
+    
     print('Loaded figures python')
 
     if run_number is None:
@@ -200,7 +213,7 @@ def dropdown_run_number(url, num_runs):
 )
 def fig_call_vol(what_if_sim_run, run_number = 999):
     # TODO: Handle case when there is no CSV file yet
-    df = pd.read_csv('data/cb_111_call_volumes.csv')
+    df = pd.read_csv(G.cb_111_call_volumes)
     thetitle = f"111 call volumes by hour and day of week"
 
     if run_number is None:
@@ -223,7 +236,7 @@ def fig_call_vol(what_if_sim_run, run_number = 999):
 )
 def sim_fig_call_vol(what_if_sim_run, run_number = 999):
     # TODO: Handle case when there is no CSV file yet
-    df = pd.read_csv('data/all_results.csv')
+    df = pd.read_csv(G.all_results_location)
     thetitle = f"Simulated 111 call volumes for run number {run_number + 1} by hour and day of week"
 
     if run_number is None:
@@ -245,7 +258,7 @@ def sim_fig_call_vol(what_if_sim_run, run_number = 999):
 )
 def ed_attend_vol(what_if_sim_run, run_number = 999):
     # TODO: Handle case when there is no CSV file yet
-    df = pd.read_csv('data/cb_ed_attendance_volumes.csv')
+    df = pd.read_csv(G.cb_ed_attedance_volumes)
     thetitle = f"ED attendance volume by hour and day of week"
 
     if run_number is None:
@@ -263,7 +276,7 @@ def ed_attend_vol(what_if_sim_run, run_number = 999):
 )
 def sim_ed_attend_vol(what_if_sim_run, run_number = 999):
     # TODO: Handle case when there is no CSV file yet
-    df = pd.read_csv('data/all_results.csv')
+    df = pd.read_csv(G.all_results_location, low_memory=False)
     df1 = df[(df.status == 'start') & (df.activity == 'ED')]
     thetitle = f"Simulated ED attendance volume for run number {run_number + 1} by hour and day of week"
 
@@ -298,8 +311,10 @@ def network_graph_draw(run_number, what_if_sim_run):
 )
 def sankey(what_if_sim_run, run_number = 999):
     # TODO: Handle case when there is no CSV file yet
-    df = pd.read_csv('data/all_results.csv')
-    wi_df = pd.read_csv('data/wi_all_results.csv')
+    df = pd.read_csv('data/all_results.csv', low_memory=False)
+
+    # TODO: Probably need to do something more graceful than just set to df
+    wi_df = pd.read_csv(G.wi_all_results_location) if exists(G.wi_all_results_location) else df
 
     if run_number < 999:
         df = df[df['run_number'] == run_number]
@@ -337,11 +352,11 @@ def downloadNetworkAnalysis(n_clicks, what_if_sim_run):
 )
 def fig_qtr_counts(what_if_sim_run, run_number = 999):
     # TODO: Handle case when there is no CSV file yet
-    cb_df = pd.read_csv('data/cb_quarterly_counts.csv')
-    df = pd.read_csv('data/all_results.csv')
+    cb_df = pd.read_csv(G.cb_quarterly_counts)
+    df = pd.read_csv(G.all_results_location, low_memory=False)
 
-    if (what_if_sim_run == 'Yes'):
-        wi_df = pd.read_csv('data/wi_all_results.csv')
+    if (what_if_sim_run == 'Yes' and exists(G.wi_all_results_location)):
+        wi_df = pd.read_csv(G.wi_all_results_location)
         wi_df1 = wi_df if run_number == 999 else wi_df[wi_df['run_number'] == run_number]
         wi_df2 = quarterly_counts(wi_df1, 'What if')
 
@@ -352,6 +367,7 @@ def fig_qtr_counts(what_if_sim_run, run_number = 999):
     df2 = quarterly_counts(df1)
 
     figdata = pd.concat([cb_df, df2, wi_df2], axis=0)
+    #print(figdata)
     figdata2 = figdata.sort_values(by=['data','quarter', 'count'], ascending=True)
 
     fig = px.bar(figdata2, x='activity', y='count', color='data', color_discrete_sequence=px.colors.qualitative.D3, facet_col='quarter', facet_col_wrap=2, text_auto=True, barmode='group', height=800, log_y=True)
@@ -373,11 +389,11 @@ def fig_qtr_counts(what_if_sim_run, run_number = 999):
 def fig_qtr_tab_counts(what_if_sim_run, run_number = 999):
     print('Inside table callback')
     # TODO: Handle case when there is no CSV file yet
-    cb_df = pd.read_csv('data/cb_quarterly_counts.csv')
-    df = pd.read_csv('data/all_results.csv')
+    cb_df = pd.read_csv(G.cb_quarterly_counts)
+    df = pd.read_csv(G.all_results_location, low_memory=False)
 
-    if (what_if_sim_run == 'Yes'):
-        wi_df = pd.read_csv('data/wi_all_results.csv')
+    if (what_if_sim_run == 'Yes' and exists(G.wi_all_results_location)):
+        wi_df = pd.read_csv(G.wi_all_results_location)
         wi_df1 = wi_df if run_number == 999 else df[df['run_number'] == run_number]
         wi_df2 = quarterly_counts(wi_df1, 'What if')
 

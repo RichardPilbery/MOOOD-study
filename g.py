@@ -24,6 +24,18 @@ class G:
 
     wi_all_results_location = 'data/wi_all_results.csv'
     wi_network_graph_location = 'data/wi_network_graph.csv'
+
+    cb_111_call_volumes = 'csv/cb_111_call_volumes.csv'
+    cb_node_list = 'csv/cb_node_list.csv'
+    cb_sankey_data = 'csv/cb_sankey.csv'
+    cb_quarterly_counts = 'csv/cb_quarterly_counts.csv'
+    cb_ed_attedance_volumes = 'csv/cb_ed_attendance_volumes.csv'
+    cb_ed_attedance_avoidable = 'csv/cb_ed_attendance_avoidable.csv'
+    cb_ed_attendance_avoidable_prop = 'csv/cb_ed_attendance_avoidable_prop.csv'
+
+    transition_probs_gp_added = "csv/transition_probs_gp_added.csv"
+    transition_probs_gp_added_no_quarters = "csv/transition_probs_gp_added_no_quarters.csv"
+    avoidable_admission_by_PC_outcome_GP_contact = "csv/avoidable_admission_by_PC_outcome_GP_contact.csv"
     
     
 
