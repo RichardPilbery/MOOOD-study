@@ -280,7 +280,7 @@ def sim_fig_call_vol(what_if_sim_run, run_number = 999):
         run_number = 999
         thetitle = f"Mean simulated 111 call volumes by hour and day of week"
 
-    fig = vol_fig(df, thetitle, run_number)
+    fig = vol_fig(df[df['activity'] == 'Index_IUC'], thetitle, run_number)
 
     return fig
 

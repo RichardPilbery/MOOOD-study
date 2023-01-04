@@ -255,7 +255,7 @@ def prep_draw_Sankey(df, run_number):
     return [sorted_labels, colorList, short_name, df3['source_number'], df3['target_number'], df3['counts2']]
 
 def vol_fig(df, thetitle, run_number, sim = True):
-
+   #print(df.head())
     if sim == False:
         call_act1 = df
     else:
