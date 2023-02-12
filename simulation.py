@@ -64,7 +64,7 @@ simulation = html.Div([
                         html.P('Number of runs', id='number_of_runs_label', className='lead'),
                         dcc.Slider(
                             1,
-                            10,
+                            100,
                             step=1,
                             value=3,
                             marks=None,

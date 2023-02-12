@@ -11,6 +11,7 @@ RUN apt-get -y install gcc python3-dev
 RUN apt-get -y install tk
 
 RUN cp -a MOOOD-study/. . && rm -r MOOOD-study
+RUN mkdir -p -v data
 
 RUN pip install -r ./requirements.txt
 
