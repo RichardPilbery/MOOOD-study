@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 # Class to manage transition probabilities for patients 
 # There are differences between those who get a timely GP contact and those who do not, so
-# this has been incorporated
+# this has been incorporated.
 
 class Transitions:
 
@@ -26,6 +26,7 @@ class Transitions:
         self.transition_probs_df = pd.read_csv(G.transition_probs_gp_added) if (transition_type == 'qtr') else pd.read_csv(G.transition_probs_gp_added_no_quarters) 
         self.transition_type = transition_type
 
+        # Early (and terrible) attempt at using a decision tree model
         self.dt_model =  pickle.load(open('csv/decision_tree_model.sav', 'rb'))
         
         self.avoidable_ed_admission_df = pd.read_csv(G.avoidable_admission_by_PC_outcome_GP_contact)
@@ -48,7 +49,7 @@ class Transitions:
     def next_destination(self, current_step: str, gp_timely_contact: str, quarter: int) -> str:
         """
         Determine the patient's next destination by sampling from previously determined  
-        distributions. These were calculated using the Fitter package
+        distributions. These were calculated using a custom script coded in R.
         
         """
 
@@ -164,49 +165,11 @@ class Transitions:
 
         return activity_time_min
 
-    # Function not in use
-    # def inter_arrival_time(self, qtr, weekend, exit_hour):
-    #     # NOTE: erlang distributions were replaced with gamma to avoid scikit warning
-    #     print(f"Interarrival time has  {qtr} and {weekend} and {exit_hour}")
-    #     distribution = {}
-    #     return_list = []
-
-    #     key = f"{qtr}_{weekend}_{exit_hour}"
-
-    #     #print(f"Key is : {key}")
-
-    #     for i in self.inter_arrival_time_distr:
-    #         for k,v in i.items():
-    #             if k == key:
-    #                 distribution = v
-    #                 break
-
-    #     #print(f"Distribution is {distribution}")
-
-    #     if len(distribution) > 0:
-    #         # There's a result
-    #         for k,v in distribution.items():
-    #             return_list.append(k)
-    #             return_list.append(v)
-    #             break
-
-    #    # print(return_list)
-
-    #     sci_distr = getattr(scipy.stats, return_list[0])
-            
-    #     while True:
-    #         # Use the dictionary values, identify them as kwargs for use by scipy distribution function
-    #         i_a_time = np.floor(sci_distr.rvs(**return_list[1]))
-    #         if i_a_time > 0 and i_a_time < 60:
-    #             # Sometimes, a negative number can crop up, which is nonsense with respect to q times.
-    #             return i_a_time
-
-
     def avoidable_ed_admission(self, pc_outcome: str, timely_gp_response: bool) -> bool:
         """
             Function to lookup probability of an admission to ED being avoidable, based on 
             the triage category of the 111 call and whether they saw a GP within the triage
-            cateogory timeframe
+            category timeframe
         """
         # time_gp_response = True/False
         # pc_outcome is string in form contact_2

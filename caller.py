@@ -30,9 +30,9 @@ class Caller:
         self.disposition_prob = CallDispositions.dx_codes.prob[CallDispositions.dx_codes.index == self.disposition][0]
         self.pc_outcome = CallDispositions.dx_codes.pc_outcome[CallDispositions.dx_codes.index == self.disposition][0]
         #print(f"PC outcome is {self.pc_outcome}")
-        # No idea what is going on here!
+        # Identify the proportion of calls that receieve a timely GP contact
         prop = CallDispositions.gp_timely_contact.prop[CallDispositions.gp_timely_contact['pc_outcome'] == self.pc_outcome]
-        #print(list(prop)[0])
+        # Get probability value from uniform distribution. If less than prop then timely contact made, otherwise not.
         self.gp_timely_callback = "yes" if ((random.uniform(0, 1) < list(prop)[0]) | (what_if_sim_run == 'Yes')) else "no"
         
         # Keep track of cumulatative time and exit after 4320 minutes i.e. 72 hours
