@@ -241,7 +241,8 @@ class HSM:
             
     def patient_journey(self, patient: Caller) -> None:
         """
-            Determine whether the patient's index 111 call is in-hours or out-of-hours (ooh)
+            Iterate caller/patient through healthcare system keeping track of elapsed time and
+            determine healthcare trajectory
         """
 
         # Variable to keep track of the order of healthcare interactions.
@@ -251,8 +252,13 @@ class HSM:
         # Capture current simulation time
         patient_enters_sim = self.env.now
     
-        # Loop will keep iterating while patient time in sim is less than simulation run time + warm up duration
-        while patient.timer < (self.warm_up_duration + G.pt_time_in_sim):
+        # Loop will keep iterating while patient time in sim is less than the time patients are to be followed up
+        # i.e. the pt_time_in_sim value (duration in hours)
+        while patient.timer < G.pt_time_in_sim:
+
+            # Add boolean to determine whether the patient is still within the simulation warm-up
+            # period. If so, then we will not record the patient progress
+            not_in_warm_up_period = False if self.env.now < self.warm_up_duration else True
             
             # Increment instance_id
             instance_id += 1
@@ -290,7 +296,7 @@ class HSM:
             self.network_df['weight'] = self.network_df.apply(lambda x: x['weight'] + 1 if x['source'] == source and x['target'] == target else x['weight'], axis = 1)
 
 
-            if patient.activity == 'Index_IUC':
+            if (patient.activity == 'Index_IUC') and not_in_warm_up_period:
                 # As a one-off, capture the completed Index IUC call
                 self.add_patient_result_row('completed', patient, instance_id, ED_urgent)
             
@@ -301,7 +307,9 @@ class HSM:
             # The time between this and 'start' will be the queue time
             # or wait time or time for the patient to have another
             # interaction with a healthcare service.
-            self.add_patient_result_row('scheduled', patient, instance_id, ED_urgent)
+            
+            if not_in_warm_up_period:
+                self.add_patient_result_row('scheduled', patient, instance_id, ED_urgent)
                 
             # Consult the wait_time function to find out how long until the next activity
             wait_time = self.t.wait_time(current_step, patient.activity)
@@ -312,10 +320,12 @@ class HSM:
                 break
             elif patient.activity == 'ED':
                 ED_urgent = "non_urgent" if self.t.avoidable_ed_admission(patient.pc_outcome, patient.gp_timely_callback) else "urgent"
-                self.add_patient_result_row('start', patient, instance_id, ED_urgent)
+                if not_in_warm_up_period:
+                    self.add_patient_result_row('start', patient, instance_id, ED_urgent)
                 yield self.env.process(self.step_visit(patient, instance_id, ED_urgent))
             else:
-                self.add_patient_result_row('start', patient, instance_id, ED_urgent)
+                if not_in_warm_up_period:
+                    self.add_patient_result_row('start', patient, instance_id, ED_urgent)
                 yield self.env.process(self.step_visit(patient, instance_id, ED_urgent))
             
             # Keep track of how long patient has been in sim
